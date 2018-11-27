@@ -1,0 +1,316 @@
+\documentclass[
+    journal=jctcce,
+    layout=twocolumn
+]{achemso}
+
+\setkeys{acs}{
+	abbreviations = false,
+	articletitle  = false,
+	keywords      = false,
+	maxauthors    = 10,
+	super         = true
+}
+
+% Comment below before submitting:
+\let\titlefont\undefined
+\usepackage[fontsize=11pt]{scrextend}
+\usepackage[hidelinks,colorlinks,citecolor=blue]{hyperref}
+%\flushbottom
+% Up to this point
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[T1]{fontenc}
+%
+\usepackage[table]{xcolor}
+\definecolor{lightgray}{gray}{0.85}
+%
+\usepackage{array}
+\newcolumntype{L}{>{$}l<{$}}
+\newcolumntype{C}{>{$}c<{$}}
+\newcolumntype{R}{>{$}r<{$}}
+%
+\newcommand{\mt}[1]{\boldsymbol{\mathbf{#1}}}   % matrix symbol
+\newcommand{\vt}[1]{\boldsymbol{\mathbf{#1}}}   % vector symbol
+\newcommand{\tr}[1]{#1^\text{t}}                % transposition
+\newcommand{\diff}[2]{\frac{\partial #2}{\partial #1}} % derivative
+%\newcommand{\diff}[2]{\nabla_{#1}{#2}} % derivative
+%\newcommand{\diff}[2]{\partial_{#1}{#2}} % derivative
+\newcommand{\avg}[1]{\overline{#1}}             % average
+
+\newcommand{\dof}{i}   % index for each degree of freedom
+
+%\listfiles
+
+\author{Charlles R. A. Abreu}
+\email{abreu@eq.ufrj.br}
+\affiliation{Chemical Engineering Department, Escola de Quimica, Universidade Federal do Rio de Janeiro, Rio de Janeiro, RJ 21941-909, Brazil}
+\alsoaffiliation{Department of Chemistry, New York University, New York, New York 10003, USA}
+
+\author{Mark E. Tuckerman}
+\email{marktuckerman@nyu.edu}
+\affiliation{Department of Chemistry, New York University, New York, New York 10003, USA}
+\alsoaffiliation{Courant Institute of Mathematical Sciences, New York University, New York, New York 10012, USA}
+\alsoaffiliation{NYU-ECNU Center for Computational Chemistry at NYU Shanghai, Shanghai 200062, China}
+
+
+\title{Solvation Free-Energy Calculation via Molecular Dynamics with Large Time Steps}
+
+\abbreviations{i.i.d., MC, MD, CLT, OBM, MSE, FEP, BAR, WHAM, MBAR, MICS}
+
+\keywords{Free Energy Computation, Reweighting, Multistate, Uncertainty Estimation}
+
+\begin{document}
+
+%\begin{tocentry}
+%Graphical Abstract
+%\end{tocentry}
+
+%\tableofcontents
+
+\begin{abstract}
+To be included.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+The SIN(R) method \cite{Leimkuhler_2013}.
+
+Isokinetic distributions coincides with a canonical distribution if we look at the coordinates only.
+
+\section{Method}
+
+\subsection{Equations of Motion}
+
+Consider a system of $N$ particles in $d$ dimensions, whose each configurational degree of freedom (DoF) $\dof$ has coordinate $q_\dof$, velocity $v_\dof$, and associated mass $m_\dof$.
+The system is subject to a potential $U(\vt q)$ and, therefore, the force acting on $\dof$ is $F_\dof = -\diff{q_\dof}{U}$.
+In the SIN(R) method, every DoF gets acted upon by an individual set of thermostats, which is known as massive thermostatting.
+For this, we define a pair of extended-system variables $v_{1,\dof}$ and $v_{2,\dof}$ for every DoF $\dof$, with associated inertial parameters $Q_1$ and $Q_2$, respectively.
+In practice, a single value $Q_1 = Q_2 = kT\tau^2$ is employed, where $k$ is the Boltzmann constant, $T$ is the temperature of the heat bath, and $\tau$ is a relevant time scale of the system dynamics.
+The stochastic differential equation (SDE) system which prescribes such dynamics is
+\begin{subequations}
+\label{eq:equations of motion}
+\begin{align}
+& \dot{q}_\dof = v_\dof, \label{eq:q} \\
+& \dot{v}_\dof = \frac{F_\dof}{m_\dof} - \lambda_\dof v_\dof, \label{eq:v} \\
+& \dot{v}_{1,\dof} = - \lambda_\dof v_{1,\dof} - v_{2,\dof} v_{1,\dof}, \quad \mathrm{and}  \label{eq:v1} \\
+& dv_{2,\dof} = \tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}dt - \gamma v_{2,\dof} dt + \sqrt{\tfrac{2 \gamma kT}{Q_2}} dW_\dof, \label{eq:v2}
+\end{align}
+\end{subequations}
+where $\gamma$ is a friction constant and $dW_\dof$ represents an infinitesimal increment of a stochastic Wiener process.
+In addition, a Lagrange multiplier $\lambda_\dof$ is introduced with the aim of imposing an isokinetic constraint to each DoF, which is \cite{Leimkuhler_2013, Margul_2016}
+\begin{subequations}
+\label{eq:isokinetic constraint}
+\begin{equation}
+m v_\dof^2 + \frac{1}{2} Q_1 v_{1,\dof}^2 = kT.
+\end{equation}
+
+Since this implies that
+\begin{equation}
+\label{eq:isokinetic constraint derivative}
+m v_\dof \dot{v}_\dof + \frac{1}{2} Q_1 v_{1,\dof}\dot{v}_{1,\dof} = 0,
+\end{equation}
+\end{subequations}
+substitution of $\dot{v}_\dof$ and $\dot{v}_{1,\dof}$ from Eqs.~\eqref{eq:v} and \eqref{eq:v1} leads to
+\begin{equation}
+\lambda_\dof = \frac{F_\dof v_\dof - \frac{1}{2} Q_1 v_{2,\dof} v_{1,\dof}^2}{m_\dof v_\dof^2 + \frac{1}{2} Q_1 v_{1,\dof}^2}.
+\end{equation}
+
+As usual, we can express a set of equations of motion as the effect of a Liouville operator over the dynamic variables of the system.
+In the present case, such operator can be expressed as
+\begin{multline}
+\label{eq:isokinetic Liouville operator}
+iL = \sum_{\dof=1}^{dN} \bigg[ v_\dof\diff{q_\dof}{} + \left(\frac{F_\dof}{m_\dof} - \lambda_\dof v_\dof\right)\diff{v_\dof}{} \\
+- \left( \lambda_\dof v_{1,\dof} + v_{2,\dof} v_{1,\dof} \right) \diff{v_{1,\dof}}{} \\
++ \tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}\diff{v_{2,\dof}}{}
++ iL_{OU,\dof} \bigg],
+\end{multline}
+where $iL_{OU,\dof}$ would, if isolated, represent a drift-free Ornstein-Uhlenbeck process involving variable $v_{2,\dof}$.
+As demonstrated in Ref.~\citenum{Leimkuhler_2013}, the SIN(R) method dynamics is ergodic and preserves the isokinetic distribution.
+The equations resemble a Nos\'{e}-Hoover-Langevin thermostat \cite{Samoletov_2007, Leimkuhler_2009}, with $v_{1,\dof}$ acting as intermediary between the system DoF $\dof$ and a Langevin-type thermostat.
+It is also possible to consider the simultaneous action of a set of $2L$ thermostat variables per DoF \cite{Minary_2003, Minary_2003_2}.
+Throughout this document, however, we only adopt the simplest case ($L=1$) because the method's efficacy has been verified to depend little on the choice of $L$ \cite{Leimkuhler_2013, Margul_2016}.
+
+\subsection{Multiple Time-Scale Integration}
+
+The SIN(R) equations can be integrated using a single time-step size appropriate for the smallest relevant time scale in the system.
+However, the most important feature of the method is related to its use in conjunction with multiple time-scale (MTS) integration.
+In order to devise an MTS scheme using the reversible reference system propagator algorithm (RESPA) \cite{Tuckerman_1992}, we split the force on each DoF $\dof$ into $M$ terms as $F_\dof = \sum_{k=1}^M F_\dof^k$.
+Here, the characteristic time scale of each force component increases with index $k$, meaning that $F_\dof^1$ is the fastest component while $F_\dof^M$ is the slowest one.
+Then, we propose partitioning the Liouville operator in Eq.~\eqref{eq:isokinetic Liouville operator} as
+\begin{equation}
+\label{eq:RESPA Liouville Operator}
+iL = iL_\mathrm{middle} + iL_\mathrm{move} + \sum_{k=1}^M \left( iL_\mathrm{force}^k + iL_\mathrm{side}^k \right).
+\end{equation}
+
+In this expression, $iL_\mathrm{move}$ is the only component that entails changes in the particle coordinates, while each $iL_\mathrm{force}^k$ is the only one that depends on the forces with superscript $k$.
+Therefore, operators  $iL_\mathrm{middle}$ and $iL_\mathrm{side}^k$ are reserved to transformations in particle velocities due to the action of the thermostats, as well as to changes in the thermostat variables themselves.
+The RESPA recipe then goes as follows.
+At the largest time scale ($k=M$), integration is done by executing $n_M$ steps of size $\delta t_M = \Delta t$.
+Internally, every step of size $\delta t_k$ taken at a time scale $k$ involves a number $n_{k-1}$ of substeps, each one of size $\delta t_k/n_{k-1}$.
+Therefore, the step sizes at all scales and the total integration time $t$ are determined once we define $\Delta t$ and a set of numbers $\{n_k\}_{k=1}^M$.
+The classical propagator representing our proposed RESPA scheme can be written in a recursive style as
+\begin{subequations}
+\label{eq:RESPA scheme}
+\begin{equation}
+e^{t iL} = \mathcal{G}_M(t),
+\end{equation}
+where an operator $\mathcal{G}_k(t)$ is defined as
+\begin{multline}
+\mathcal{G}_k(t) = \Big[e^{\frac{t}{2 n_k} iL_\mathrm{side}^k}
+e^{\frac{t}{2 n_k} iL_\mathrm{force}^k}
+\mathcal{G}_{k-1}\left(\tfrac{t}{n_k}\right) \times \\
+\times e^{\frac{t}{2 n_k} iL_\mathrm{force}^k}
+e^{\frac{t}{2 n_k} iL_\mathrm{side}^k}
+\Big]^{n_k}.
+\end{multline}
+
+The definition above applies for $k \in [1, M]$.
+The recursive process comes to an end when we make
+\begin{equation}
+\mathcal{G}_0(t) = e^{\frac{t}{2} iL_\mathrm{move}}
+e^{t iL_\mathrm{middle}}
+e^{\frac{t}{2} iL_\mathrm{move}}.
+\end{equation}
+\end{subequations}
+
+The use of words \textit{middle} and \textit{side} was inspired by the work of Zhang \textit{et al}. \cite{Zhang_2017}, since Eq.~\eqref{eq:RESPA scheme} can be regarded as a MTS generalization of the unified thermostat method they discuss therein.
+
+In order to fit Eq.~\eqref{eq:RESPA Liouville Operator} into Eq.~\eqref{eq:isokinetic Liouville operator}, we begin by realizing that
+\begin{equation}
+iL_\mathrm{move} = \sum_\dof v_\dof \diff{q_\dof}{},
+\end{equation}
+which makes the effect of a propagator $e^{t iL_\mathrm{move}}$ be a simple translation $q_\dof \leftarrow q_\dof + v_\dof t$ for all $\dof$.
+Next, following Leimkuhler \textit{et al}. \cite{Leimkuhler_2013}, we define
+\begin{equation}
+\label{eq:force-dependent Liouville operator}
+iL_\mathrm{force}^k = \sum_\dof \left[\left(\frac{F^k_\dof}{m_\dof} - \lambda^k_\dof v_\dof \right)\diff{v_\dof}{} - \lambda^k_\dof v_{1,\dof} \diff{v_{1,\dof}}{}\right],
+\end{equation}
+where the new Lagrange multiplier $\lambda^k_\dof$ ensures that the isokinetic constraint holds, as in Eq.~\eqref{eq:isokinetic constraint}, at an application of propagator $e^{t iL_\mathrm{force}^k}$ alone.
+It is possible to compute the action of this propagator exactly \cite{Minary_2003, Leimkuhler_2013}, as we will discuss shortly.
+
+Finally, the remaining components $iL_\mathrm{middle}$ and $\{iL_\mathrm{side}^k\}_{k=1}^M$ must be defined so that
+\begin{multline}
+iL_\mathrm{middle} + \sum_{k=1}^M iL_\mathrm{side}^k = \\
+- \sum_{\dof=1}^{dN} \left[ \lambda^\ast_\dof v_\dof\diff{v_\dof}{} + \left(\lambda^\ast_\dof v_{1,\dof} + v_{2,\dof} v_{1,\dof}\right)\diff{v_{1,\dof}}{} \right] \\
++ \sum_{\dof=1}^{dN} \left[\tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}\diff{v_{2,\dof}}{}
++ iL_{OU,\dof} \right],
+\end{multline}
+where $\lambda^\ast_\dof = \lambda_\dof - \sum_{k=1}^M \lambda^k_\dof$.
+Evidently, there are multiple such definitions, which result in distinct integration procedures.
+For instance, one can make $iL_\mathrm{middle} = \sum_{k=1}^M iL_{OU,\dof}$ and $iL_\mathrm{side}^k = 0$ for all but a selected index $k = k^\ast$.
+In this way, the XO-RESPA scheme described in Ref.~\citenum{Leimkuhler_2013} corresponds to $k^\ast = M$.
+Even though the XI-RESPA scheme \cite{Leimkuhler_2013} does not fit exactly into this notation, a close variant emerges by making $k^\ast = 1$.
+Nevertheless, we introduce a new scheme here, based on the recent findings of Zhang and co-workers \cite{Zhang_2017}.
+They verified that a thermostat tends to work better in terms of configurational sampling when its integration 
+
+
+goes in-between coordinate updates.
+
+
+This tendency had been noted already for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, and the new study included other stochastic as well as deterministic thermostats.
+% TODO: thorough reading of Leimkuhler_2012 and Leimkuhler_2013_2
+In view of these findings, 
+
+
+\section{Alternative RESPA Splitting}
+
+The classical propagator representing our proposed RESPA scheme can be written in a recursive style as
+\begin{subequations}
+	\label{eq:RESPA scheme}
+	\begin{equation}
+	e^{t iL} = \mathcal{G}_M(t),
+	\end{equation}
+	where an operator $\mathcal{G}_k(t)$ is defined as
+	\begin{multline}
+	\mathcal{G}_k(t) = \Big[\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
+	e^{\frac{t}{2 n_k} iL_\mathrm{force}^k}
+	e^{\frac{t}{n_k} iL_\mathrm{middle}^k}
+	 \times \\
+	\times e^{\frac{t}{2 n_k} iL_\mathrm{force}^k}
+	\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
+	\Big]^{n_k}.
+	\end{multline}
+	
+	The definition above applies for $k \in [1, M]$.
+	The recursive process comes to an end when we make
+	\begin{equation}
+	\mathcal{G}_0(t) = e^{\frac{t}{2} iL_\mathrm{move}}
+	e^{t iL_\mathrm{middle}}
+	e^{\frac{t}{2} iL_\mathrm{move}}.
+	\end{equation}
+\end{subequations}
+
+\subsection{Force-Dependent Isokinetic Propagator}
+
+The equations of motion that stem from the Liouville operator in Eq.~\eqref{eq:force-dependent Liouville operator} are
+\begin{subequations}
+\label{eq:force-dependent isokinetic equations}
+\begin{align}
+& \dot{v}_\dof = \frac{F^k_\dof}{m_\dof} - \lambda^k_\dof v_\dof \quad \mathrm{and} \\
+& \dot{v}_{1,\dof} = - \lambda^k_\dof v_{1,\dof}.
+\end{align}
+	
+In this case, for Eq.~\eqref{eq:isokinetic constraint derivative} to be satisfied, it is required that
+\begin{equation}
+\lambda^k_\dof = \frac{F^k_\dof v_\dof}{m_\dof v_\dof^2 + \frac{1}{2} Q_1 v_{1,\dof}^2}.
+\end{equation}
+\end{subequations}
+
+\subsection{Force-Independent Isokinetic Propagator}
+
+\begin{equation}
+\lambda^\ast_\dof = \frac{- \frac{1}{2} Q_1 v_{2,\dof} v_{1,\dof}^2}{m_\dof v_\dof^2 + \frac{1}{2} Q_1 v_{1,\dof}^2}.
+\end{equation}
+
+
+\section{DRAFT}
+
+
+
+
+\begin{equation}
+iL = iL_\mathrm{move} + iL_\mathrm{force} + iL_\mathrm{extra}.
+\end{equation}
+
+\begin{equation}
+iL_\mathrm{move} = \sum_\dof v_\dof\diff{q_\dof}{}
+\end{equation}
+
+\begin{equation}
+iL_\mathrm{force} = \sum_\dof \left[ \left(\frac{F_\dof}{m_\dof} - \lambda^\mathrm{F}_\dof v_\dof\right)\diff{v_\dof}{} - \lambda^\mathrm{F}_\dof v_{1,\dof}\diff{v_{1,\dof}}{} \right]
+\end{equation}
+
+\begin{equation}
+iL_\mathrm{extra} = - \lambda^\ast_\dof v_\dof\diff{v_\dof}{} - \left(\lambda^\ast_\dof v_{1,\dof} + v_{2,\dof} v_{1,\dof}\right)\diff{v_{1,\dof}}{} \\
++ \tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}\diff{v_{2,\dof}}{}
++ iL_{OU,\dof}
+\end{equation}
+
+\begin{multline}
+iL_\dof = v_\dof\diff{q_\dof}{} \\
++ \sum_{k=1}^M \left[ \left(\frac{F^k_\dof}{m_\dof} - \lambda^k_\dof v_\dof\right)\diff{v_\dof}{} - \lambda^k_\dof v_{1,\dof}\diff{v_{1,\dof}}{} \right] \\
+- \lambda^\ast_\dof v_\dof\diff{v_\dof}{} - \left(\lambda^\ast_\dof v_{1,\dof} + v_{2,\dof} v_{1,\dof}\right)\diff{v_{1,\dof}}{} \\
++ \tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}\diff{v_{2,\dof}}{}
++ iL_{OU,\dof}
+\end{multline}
+
+\section{Results}
+
+\subsection{Solvation Free Energy}
+\label{sec:solvation free energy}
+
+
+\section{Conclusion}
+
+
+\begin{acknowledgement}
+
+C.R.A.A. acknowledges the financial support of Petrobras (project code CENPES 16113).
+
+\end{acknowledgement}
+
+\bibliography{sinr}
+
+\end{document}
