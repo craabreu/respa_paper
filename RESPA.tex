@@ -84,9 +84,9 @@ Isokinetic distributions coincides with a canonical distribution if we look at t
 
 \section{Multiple Time-Scale Integration}
 
-Consider a system of $N$ particles in $d$ dimensions, whose every configurational degree of freedom (DoF) $\dof$ has coordinate $q_\dof$, momentum $p_\dof$, and associated mass $m_\dof$.
-The system is subject to a potential field $U(q)$ and, therefore, the force acting on DoF $\dof$ is defined as $F_\dof = -\diff{q_\dof}{U}$.
-In addition, a set of extended phase-space variables is included so that the original phase space can be sampled in accordance with some specified statistical ensemble.
+Consider a system of $N$ particles in $d$ dimensions, whose every configurational degree of freedom $\dof$ has coordinate $q_\dof$, momentum $p_\dof$, and associated mass $m_\dof$.
+The system is subject to a potential field $U(q)$ and, therefore, the force acting on $\dof$ is $F_\dof = -\diff{q_\dof}{U}$.
+In addition, a set of extended phase-space variables is included so that the original phase space can be dynamically sampled in accordance with some specified statistical ensemble.
 If $x$ is a vector comprising all dynamical variables, we can represent the equations of motion which describe a flow through the extended phase space as
 \begin{equation}
 \label{eq:general equation of motion}
@@ -94,142 +94,116 @@ If $x$ is a vector comprising all dynamical variables, we can represent the equa
 \end{equation}
 where $\Liu = \xi(x) \cdot \nabla_x$ is a generalized (i.e. non-Hamiltonian) Liouville operator \cite{Tuckerman_1999, Tuckerman_2001, Tuckerman_2006}.
 
-Formal solution:
-\begin{equation}
-x_t = e^{t\Liu}x_0.
-\end{equation}
+The solution of this equation is formally written as $x_t = e^{t\Liu}x_0$.
+However, it is usually necessary to approximate the action of the classical propagator $e^{t\Liu}$ numerically.
+This can be done by sequentially applying a split operator $\prod_j e^{\Delta t\Liu_j} \approx e^{\Delta \Liu}$, where $\Delta t = t/n_M$ and $\sum_j \Liu_j = \Liu$.
+This means that $n_M$ is the number of integration steps and $\Delta t$ is the step size.
+According to the Trotter theorem \cite{Trotter_1959}, equality holds when $\Delta t \to 0$.
 
-Split solution:
-\begin{equation}
-x_t = \left(\prod_j e^{\frac{t}{N_s}\Liu_j} \right)^{N_s} x_0.
-\end{equation}
-where $\sum_j \Liu_j = \Liu$.
-
-
-In order to devise a multiple time-scale (MTS) integration scheme using the reversible reference system propagator algorithm (RESPA) \cite{Tuckerman_1992}, we split the force on each DoF $\dof$ into $M$ terms as $F_\dof = \sum_{k=1}^M F_\dof^k$.
+In order to devise a multiple time-scale (MTS) integration scheme using the reversible reference system propagator algorithm (RESPA) \cite{Tuckerman_1992}, we split the force on each degree of freedom $\dof$ into a sum of $M$ terms, i.e. $F_\dof = \sum_{k=1}^M F_\dof^k$.
 Here, the characteristic time scale of each force component increases with index $k$, meaning that $F_\dof^1$ is the fastest component while $F_\dof^M$ is the slowest one.
-Then, we propose partitioning the extended-system Liouville operator in Eq.~\eqref{eq:general equation of motion} as
+In the basic RESPA recipe, integration at the largest time scale ($k=M$) is done by executing $n_M$ steps of size $\delta t_M = \Delta t$.
+Internally, every step of size $\delta t_k$, taken at a time scale $k$, involves $n_{k-1}$ substeps of size $\delta t_k/n_{k-1}$ each.
+Therefore, the step sizes at all time scales are determined by defining the total integration time $t$ and a set of integer numbers $\{n_k\}_{k=1}^M$.
+
+Here, we propose partitioning the extended-system Liouville operator in Eq.~\eqref{eq:general equation of motion} as
 \begin{equation}
 \label{eq:RESPA Liouville Operator}
-\Liu = \Liu_\mathrm{move} + \sum_{k=1}^M \Liu_\mathrm{force}^k + \sum_{k=0}^M \Liu_\mathrm{ext}^k.
+\Liu = \Liu_\mathrm{move} + \sum_{k=1}^M \Liu_\mathrm{force}^k + \sum_{k=0}^M \Liu_\mathrm{ext}^k,
+\end{equation}
+where $\Liu_\mathrm{move}$ is the only component which entails changes in the particle coordinates.
+Likewise, each component $\Liu_\mathrm{force}^k$ is the only one that depends on the forces labeled with superscript $k$.
+Then, operators $\{\Liu_\mathrm{ext}^k\}_{k=0}^M$ are reserved to transformations in particle momenta that depend exclusively on the state of extended-space variables.
+Finally, we note that transformations in these variables can occur due to the action of any component in Eq.~\eqref{eq:RESPA Liouville Operator}.
+
+The classical propagator representing a possible RESPA scheme can be written in a recursive manner as
+\begin{equation}
+\label{eq:RESPA outermost propagator}
+e^{t \Liu} = \mathcal{G}_M(t),
+\end{equation}
+where $\mathcal{G}_M(t)$ belongs to a family of operators whose each member $\mathcal{G}_k(t)$ is defined as
+\begin{multline}
+\label{eq:RESPA scheme 1}
+\mathcal{G}_k(t) = \Big[e^{\frac{t}{2 n_k} \Liu_\mathrm{ext}^k}
+e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
+\mathcal{G}_{k-1}\left(\tfrac{t}{n_k}\right) \times \\
+\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
+e^{\frac{t}{2 n_k} \Liu_\mathrm{ext}^k}
+\Big]^{n_k}.
+\end{multline}
+
+This definition applies for $k \in [1, M]$, and the recursive process comes to an end when we make
+\begin{equation}
+\label{eq:RESPA innermost propagator}
+\mathcal{G}_0(t) = e^{\frac{t}{2} \Liu_\mathrm{move}}
+e^{t \Liu_\mathrm{ext}^0}
+e^{\frac{t}{2} \Liu_\mathrm{move}}.
 \end{equation}
 
-In this expression, $\Liu_\mathrm{move}$ is the only component which, when acting alone, entails changes in the particle coordinates.
-Likewise, each component $\Liu_\mathrm{force}^k$ is the only one which depends on the forces with superscript $k$.
-Hence, operators $\{\Liu_\mathrm{ext}^k\}_{k=0}^M$ are reserved to transformations in particle momenta due exclusively to the action of extended-space variables.
-Note that any component can possibly involve transformations in these variables themselves.
-
-The RESPA recipe then goes as follows.
-At the largest time scale ($k=M$), integration is done by executing $n_M$ steps of size $\delta t_M = \Delta t$.
-Internally, every step of size $\delta t_k$, taken at a time scale $k$, involves a number $n_{k-1}$ of substeps, each one of size $\delta t_k/n_{k-1}$.
-Therefore, the step sizes at all scales and the total integration time $t$ are determined once we define $\Delta t$ and a set of numbers $\{n_k\}_{k=1}^M$.
-The classical propagator representing a possible RESPA scheme can be written in a recursive manner as
-\begin{subequations}
-	\label{eq:RESPA scheme}
-	\begin{equation}
-	e^{t \Liu} = \mathcal{G}_M(t),
-	\end{equation}
-	where an operator $\mathcal{G}_k(t)$ is defined as
-	\begin{multline}
-	\mathcal{G}_k(t) = \Big[e^{\frac{t}{2 n_k} \Liu_\mathrm{ext}^k}
-	e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-	\mathcal{G}_{k-1}\left(\tfrac{t}{n_k}\right) \times \\
-	\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-	e^{\frac{t}{2 n_k} \Liu_\mathrm{ext}^k}
-	\Big]^{n_k}.
-	\end{multline}
-	
-	The definition above applies for $k \in [1, M]$.
-	The recursive process comes to an end when we make
-	\begin{equation}
-	\mathcal{G}_0(t) = e^{\frac{t}{2} \Liu_\mathrm{move}}
-	e^{t \Liu_\mathrm{ext}^0}
-	e^{\frac{t}{2} \Liu_\mathrm{move}}.
-	\end{equation}
-\end{subequations}
-
-These scheme is closely related to the extended system RESPA algorithms introduced in Ref.~\citenum{Martyna_1996}.
-For instance, one can make $\Liu_\mathrm{side}^k = 0$ for all but a selected index $k = k^\ast$.
-In this way, the XO-RESPA scheme described in Ref.~\citenum{Leimkuhler_2013} corresponds to $k^\ast = M$.
-Even though the XI-RESPA scheme \cite{Leimkuhler_2013} does not fit exactly into this notation, a close variant emerges by making $k^\ast = 1$.
-Nevertheless, we introduce a new scheme here, based on the recent findings of Zhang and co-workers \cite{Zhang_2017}.
-They verified that a thermostat tends to work better in terms of configurational sampling when its integration 
-
-
-The use of words \textit{middle} and \textit{side} was inspired by the work of Zhang \textit{et al}. \cite{Zhang_2017}, since Eq.~\eqref{eq:RESPA scheme} can be regarded as a MTS generalization of the unified thermostat method they discuss therein.
-
-In order to fit Eq.~\eqref{eq:RESPA Liouville Operator} into Eq.~\eqref{eq:isokinetic Liouville operator}, we begin by realizing that
+As an example, for a system at constant volume subject to the action of a set of thermostats, we would have
 \begin{equation}
 \Liu_\mathrm{move} = \sum_\dof v_\dof \diff{q_\dof}{},
 \end{equation}
-which makes the effect of a propagator $e^{t \Liu_\mathrm{move}}$ be a simple translation $q_\dof \leftarrow q_\dof + v_\dof t$ for all $\dof$.
-Next, following Leimkuhler \textit{et al}. \cite{Leimkuhler_2013}, we define
+where $v_\dof = \frac{p_\dof}{m_\dof}$ is the velocity of degree of freedom $\dof$, and
 \begin{equation}
-\label{eq:force-dependent Liouville operator}
-\Liu_\mathrm{force}^k = \sum_\dof \left[\left(\frac{F^k_\dof}{m_\dof} - \lambda^k_\dof v_\dof \right)\diff{v_\dof}{} - \lambda^k_\dof v_{1,\dof} \diff{v_{1,\dof}}{}\right],
+\Liu_\mathrm{force}^k = \sum_\dof F_\dof^k \diff{p_\dof}{},
 \end{equation}
-where the new Lagrange multiplier $\lambda^k_\dof$ ensures that the isokinetic constraint holds, as in Eq.~\eqref{eq:isokinetic constraint}, at an application of propagator $e^{t \Liu_\mathrm{force}^k}$ alone.
-It is possible to compute the action of this propagator exactly \cite{Minary_2003, Leimkuhler_2013}, as we will discuss shortly.
+meaning that the effects of propagators $e^{t \Liu_\mathrm{move}}$ and $e^{t \Liu_\mathrm{force}^k}$ are simple translations $q_\dof \leftarrow q_\dof + v_\dof t$ and $p_\dof \leftarrow p_\dof + F_\dof^k t$ for all $\dof$, respectively.
+Then, if the Liouville operator regarding the thermostat set is $\Liu_\mathrm{T}$, we have freedom to allocate its components throughout the several time scales, with the requirement that $\sum_{k=0}^M \Liu_\mathrm{ext}^k = \Liu_\mathrm{T}$.
 
-Finally, the remaining components $\Liu_\mathrm{middle}$ and $\{\Liu_\mathrm{side}^k\}_{k=1}^M$ must be defined so that
+The described MTS scheme becomes closely related to the extended system RESPA algorithms introduced in Ref.~\citenum{Martyna_1996} if one makes $\Liu_\mathrm{ext}^k = 0$ for all but a selected index $k^\ast \geq 1$.
+This implies that the whole thermostat is integrated at a unique time scale.
+For instance, the XO-RESPA scheme \cite{Martyna_1996, Leimkuhler_2013} is reproduced by making $k^\ast = M$.
+Even though the XI-RESPA scheme \cite{Martyna_1996, Leimkuhler_2013} does not fit exactly into the proposed notation, a close variant XI\textsuperscript{*}-RESPA emerges by making $k^\ast = 1$.
+
+Due to the presence of $e^{t \Liu_\mathrm{ext}^0}$ in Eq.~\eqref{eq:RESPA innermost propagator}, the described scheme can also be regarded as a MTS generalization of the approach which Zhang and co-workers presented recently as a unified thermostat approach \cite{Zhang_2017}.
+By making $\Liu_\mathrm{ext}^0 = \Liu_\mathrm{T}$ and $\Liu_\mathrm{ext}^k = 0$ for all $k > 0$, one reproduces the so-called \textit{middle} scheme \cite{Zhang_2017}, in which the thermostat integration occurs in-between coordinate moves.
+In this way, thermostat-induced changes in particle momenta acquire a more direct influence on the resulting new coordinates.
+As  Zhang \textit{et al}. \cite{Zhang_2017} observed, this tends to produce better coordinate sampling when compared to the more traditional \textit{side} schemes \cite{Zhang_2017}.
+Such a tendency had been noted already for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, but the new study extended the observation for other stochastic as well as deterministic thermostats.
+
+Zhang \textit{et al}. \cite{Zhang_2017} also noted that the middle-scheme improvement in coordinate sampling is achieved at the cost of a degraded sampling of momenta and related properties.
+It is implied here that configurational sampling occurs right after the end of a complete time step.
+Hence, it is performed after a momentum move in both the middle and side schemes, with the difference that such move is force-induced in the former but thermostat-induced in the latter.
+It is thus not surprising that the momenta sampled with the side scheme comply more closely with a canonical distribution than those sampled with the middle scheme.
+
+TODO: prepare a figure comparing the different schemes. 
+
+The authors also tested a third approach whose operator splitting is identical to the side scheme, thus producing exactly the same dynamics, 
+
+
+
+
+momentum move in the middle scheme and after a thermostat-induced momentum move in the side scheme.
+
+
+s, but with an important difference.
+in the former such a momentum move comprises 
+
+We argue, however, that this is a mere convention, since an equally valid integration method could be devised by shifting the endpoint of each step to some other place in the sequence of propagators.
+
+We propose a different scheme by altering the order of the operators in Eq.~\eqref{eq:RESPA scheme 2}.
+In this new scheme, $\mathcal{G}_k(t)$ becomes
 \begin{multline}
-\Liu_\mathrm{middle} + \sum_{k=1}^M \Liu_\mathrm{side}^k = \\
-- \sum_{\dof=1}^{dN} \left[ \lambda^\ast_\dof v_\dof\diff{v_\dof}{} + \left(\lambda^\ast_\dof v_{1,\dof} + v_{2,\dof} v_{1,\dof}\right)\diff{v_{1,\dof}}{} \right] \\
-+ \sum_{\dof=1}^{dN} \left[\tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}\diff{v_{2,\dof}}{}
-+ \Liu_{OU,\dof} \right],
+\label{eq:RESPA scheme 2}
+\mathcal{G}_k(t) = \Big[\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
+e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
+e^{\frac{t}{n_k} \Liu_\mathrm{ext}^k}
+\times \\
+\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
+\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
+\Big]^{n_k}.
 \end{multline}
-where $\lambda^\ast_\dof = \lambda_\dof - \sum_{k=1}^M \lambda^k_\dof$.
-Evidently, there are multiple such definitions, which result in distinct integration procedures.
-For instance, one can make $\Liu_\mathrm{middle} = \sum_{k=1}^M \Liu_{OU,\dof}$ and $\Liu_\mathrm{side}^k = 0$ for all but a selected index $k = k^\ast$.
-In this way, the XO-RESPA scheme described in Ref.~\citenum{Leimkuhler_2013} corresponds to $k^\ast = M$.
-Even though the XI-RESPA scheme \cite{Leimkuhler_2013} does not fit exactly into this notation, a close variant emerges by making $k^\ast = 1$.
-Nevertheless, we introduce a new scheme here, based on the recent findings of Zhang and co-workers \cite{Zhang_2017}.
-They verified that a thermostat tends to work better in terms of configurational sampling when its integration 
 
+In this way, sampling is performed after an update in the smallest time scale.
 
-goes in-between coordinate updates.
-
-
-This tendency had been noted already for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, and the new study included other stochastic as well as deterministic thermostats.
-% TODO: thorough reading of Leimkuhler_2012 and Leimkuhler_2013_2
-In view of these findings, 
-
-
-\section{Alternative RESPA Splitting}
-
-The classical propagator representing our proposed RESPA scheme can be written in a recursive style as
-\begin{subequations}
-	\label{eq:RESPA scheme}
-	\begin{equation}
-	e^{t \Liu} = \mathcal{G}_M(t),
-	\end{equation}
-	where an operator $\mathcal{G}_k(t)$ is defined as
-	\begin{multline}
-	\mathcal{G}_k(t) = \Big[\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
-	e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-	e^{\frac{t}{n_k} \Liu_\mathrm{middle}^k}
-	\times \\
-	\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-	\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
-	\Big]^{n_k}.
-	\end{multline}
-	
-	The definition above applies for $k \in [1, M]$.
-	The recursive process comes to an end when we make
-	\begin{equation}
-	\mathcal{G}_0(t) = e^{\frac{t}{2} \Liu_\mathrm{move}}
-	e^{t \Liu_\mathrm{middle}}
-	e^{\frac{t}{2} \Liu_\mathrm{move}}.
-	\end{equation}
-\end{subequations}
-
+\section{Stochastic Isokinetic Method}
 
 \subsection{Equations of Motion}
 
-Consider a system of $N$ particles in $d$ dimensions, whose each configurational degree of freedom (DoF) $\dof$ has coordinate $q_\dof$, velocity $v_\dof$, and associated mass $m_\dof$.
-The system is subject to a potential $U(\vt q)$ and, therefore, the force acting on $\dof$ is $F_\dof = -\diff{q_\dof}{U}$.
-In the SIN(R) method, every DoF gets acted upon by an individual set of thermostats, which is known as massive thermostatting.
-For this, we define a pair of extended-system variables $v_{1,\dof}$ and $v_{2,\dof}$ for every DoF $\dof$, with associated inertial parameters $Q_1$ and $Q_2$, respectively.
+In the SIN(R) method, every dof gets acted upon by an individual set of thermostats.
+This is known as massive thermostatting.
+For this, we define a pair of extended-system variables $v_{1,\dof}$ and $v_{2,\dof}$ for every dof $\dof$, with associated inertial parameters $Q_1$ and $Q_2$, respectively.
 In practice, a single value $Q_1 = Q_2 = kT\tau^2$ is employed, where $k$ is the Boltzmann constant, $T$ is the temperature of the heat bath, and $\tau$ is a relevant time scale of the system dynamics.
 The stochastic differential equation (SDE) system which prescribes such dynamics is
 \begin{subequations}
@@ -242,7 +216,7 @@ The stochastic differential equation (SDE) system which prescribes such dynamics
 \end{align}
 \end{subequations}
 where $\gamma$ is a friction constant and $dW_\dof$ represents an infinitesimal increment of a stochastic Wiener process.
-In addition, a Lagrange multiplier $\lambda_\dof$ is introduced with the aim of imposing an isokinetic constraint to each DoF, which is \cite{Leimkuhler_2013, Margul_2016}
+In addition, a Lagrange multiplier $\lambda_\dof$ is introduced with the aim of imposing an isokinetic constraint to each dof, which is \cite{Leimkuhler_2013, Margul_2016}
 \begin{subequations}
 \label{eq:isokinetic constraint}
 \begin{equation}
@@ -271,119 +245,9 @@ In the present case, such operator can be expressed as
 \end{multline}
 where $\Liu_{OU,\dof}$ would, if isolated, represent a drift-free Ornstein-Uhlenbeck process involving variable $v_{2,\dof}$.
 As demonstrated in Ref.~\citenum{Leimkuhler_2013}, the SIN(R) method dynamics is ergodic and preserves the isokinetic distribution.
-The equations resemble a Nos\'{e}-Hoover-Langevin thermostat \cite{Samoletov_2007, Leimkuhler_2009}, with $v_{1,\dof}$ acting as intermediary between the system DoF $\dof$ and a Langevin-type thermostat.
-It is also possible to consider the simultaneous action of a set of $2L$ thermostat variables per DoF \cite{Minary_2003, Minary_2003_2}.
+The equations resemble a Nos\'{e}-Hoover-Langevin thermostat \cite{Samoletov_2007, Leimkuhler_2009}, with $v_{1,\dof}$ acting as intermediary between the system dof $\dof$ and a Langevin-type thermostat.
+It is also possible to consider the simultaneous action of a set of $2L$ thermostat variables per dof \cite{Minary_2003, Minary_2003_2}.
 Throughout this document, however, we only adopt the simplest case ($L=1$) because the method's efficacy has been verified to depend little on the choice of $L$ \cite{Leimkuhler_2013, Margul_2016}.
-
-\subsection{Multiple Time-Scale Integration}
-
-The SIN(R) equations can be integrated using a single time-step size appropriate for the smallest relevant time scale in the system.
-However, the most important feature of the method is related to its use in conjunction with multiple time-scale (MTS) integration.
-In order to devise an MTS scheme using the reversible reference system propagator algorithm (RESPA) \cite{Tuckerman_1992}, we split the force on each DoF $\dof$ into $M$ terms as $F_\dof = \sum_{k=1}^M F_\dof^k$.
-Here, the characteristic time scale of each force component increases with index $k$, meaning that $F_\dof^1$ is the fastest component while $F_\dof^M$ is the slowest one.
-Then, we propose partitioning the Liouville operator in Eq.~\eqref{eq:isokinetic Liouville operator} as
-\begin{equation}
-\label{eq:RESPA Liouville Operator}
-\Liu = \Liu_\mathrm{middle} + \Liu_\mathrm{move} + \sum_{k=1}^M \left( \Liu_\mathrm{force}^k + \Liu_\mathrm{side}^k \right).
-\end{equation}
-
-In this expression, $\Liu_\mathrm{move}$ is the only component that entails changes in the particle coordinates, while each $\Liu_\mathrm{force}^k$ is the only one that depends on the forces with superscript $k$.
-Therefore, operators  $\Liu_\mathrm{middle}$ and $\Liu_\mathrm{side}^k$ are reserved to transformations in particle velocities due to the action of the thermostats, as well as to changes in the thermostat variables themselves.
-The RESPA recipe then goes as follows.
-At the largest time scale ($k=M$), integration is done by executing $n_M$ steps of size $\delta t_M = \Delta t$.
-Internally, every step of size $\delta t_k$ taken at a time scale $k$ involves a number $n_{k-1}$ of substeps, each one of size $\delta t_k/n_{k-1}$.
-Therefore, the step sizes at all scales and the total integration time $t$ are determined once we define $\Delta t$ and a set of numbers $\{n_k\}_{k=1}^M$.
-The classical propagator representing our proposed RESPA scheme can be written in a recursive style as
-\begin{subequations}
-\label{eq:RESPA scheme}
-\begin{equation}
-e^{t \Liu} = \mathcal{G}_M(t),
-\end{equation}
-where an operator $\mathcal{G}_k(t)$ is defined as
-\begin{multline}
-\mathcal{G}_k(t) = \Big[e^{\frac{t}{2 n_k} \Liu_\mathrm{side}^k}
-e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-\mathcal{G}_{k-1}\left(\tfrac{t}{n_k}\right) \times \\
-\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-e^{\frac{t}{2 n_k} \Liu_\mathrm{side}^k}
-\Big]^{n_k}.
-\end{multline}
-
-The definition above applies for $k \in [1, M]$.
-The recursive process comes to an end when we make
-\begin{equation}
-\mathcal{G}_0(t) = e^{\frac{t}{2} \Liu_\mathrm{move}}
-e^{t \Liu_\mathrm{middle}}
-e^{\frac{t}{2} \Liu_\mathrm{move}}.
-\end{equation}
-\end{subequations}
-
-The use of words \textit{middle} and \textit{side} was inspired by the work of Zhang \textit{et al}. \cite{Zhang_2017}, since Eq.~\eqref{eq:RESPA scheme} can be regarded as a MTS generalization of the unified thermostat method they discuss therein.
-
-In order to fit Eq.~\eqref{eq:RESPA Liouville Operator} into Eq.~\eqref{eq:isokinetic Liouville operator}, we begin by realizing that
-\begin{equation}
-\Liu_\mathrm{move} = \sum_\dof v_\dof \diff{q_\dof}{},
-\end{equation}
-which makes the effect of a propagator $e^{t \Liu_\mathrm{move}}$ be a simple translation $q_\dof \leftarrow q_\dof + v_\dof t$ for all $\dof$.
-Next, following Leimkuhler \textit{et al}. \cite{Leimkuhler_2013}, we define
-\begin{equation}
-\label{eq:force-dependent Liouville operator}
-\Liu_\mathrm{force}^k = \sum_\dof \left[\left(\frac{F^k_\dof}{m_\dof} - \lambda^k_\dof v_\dof \right)\diff{v_\dof}{} - \lambda^k_\dof v_{1,\dof} \diff{v_{1,\dof}}{}\right],
-\end{equation}
-where the new Lagrange multiplier $\lambda^k_\dof$ ensures that the isokinetic constraint holds, as in Eq.~\eqref{eq:isokinetic constraint}, at an application of propagator $e^{t \Liu_\mathrm{force}^k}$ alone.
-It is possible to compute the action of this propagator exactly \cite{Minary_2003, Leimkuhler_2013}, as we will discuss shortly.
-
-Finally, the remaining components $\Liu_\mathrm{middle}$ and $\{\Liu_\mathrm{side}^k\}_{k=1}^M$ must be defined so that
-\begin{multline}
-\Liu_\mathrm{middle} + \sum_{k=1}^M \Liu_\mathrm{side}^k = \\
-- \sum_{\dof=1}^{dN} \left[ \lambda^\ast_\dof v_\dof\diff{v_\dof}{} + \left(\lambda^\ast_\dof v_{1,\dof} + v_{2,\dof} v_{1,\dof}\right)\diff{v_{1,\dof}}{} \right] \\
-+ \sum_{\dof=1}^{dN} \left[\tfrac{Q_1 v_{1,\dof}^2 - kT}{Q_2}\diff{v_{2,\dof}}{}
-+ \Liu_{OU,\dof} \right],
-\end{multline}
-where $\lambda^\ast_\dof = \lambda_\dof - \sum_{k=1}^M \lambda^k_\dof$.
-Evidently, there are multiple such definitions, which result in distinct integration procedures.
-For instance, one can make $\Liu_\mathrm{middle} = \sum_{k=1}^M \Liu_{OU,\dof}$ and $\Liu_\mathrm{side}^k = 0$ for all but a selected index $k = k^\ast$.
-In this way, the XO-RESPA scheme described in Ref.~\citenum{Leimkuhler_2013} corresponds to $k^\ast = M$.
-Even though the XI-RESPA scheme \cite{Leimkuhler_2013} does not fit exactly into this notation, a close variant emerges by making $k^\ast = 1$.
-Nevertheless, we introduce a new scheme here, based on the recent findings of Zhang and co-workers \cite{Zhang_2017}.
-They verified that a thermostat tends to work better in terms of configurational sampling when its integration 
-
-
-goes in-between coordinate updates.
-
-
-This tendency had been noted already for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, and the new study included other stochastic as well as deterministic thermostats.
-% TODO: thorough reading of Leimkuhler_2012 and Leimkuhler_2013_2
-In view of these findings, 
-
-
-\section{Alternative RESPA Splitting}
-
-The classical propagator representing our proposed RESPA scheme can be written in a recursive style as
-\begin{subequations}
-	\label{eq:RESPA scheme}
-	\begin{equation}
-	e^{t \Liu} = \mathcal{G}_M(t),
-	\end{equation}
-	where an operator $\mathcal{G}_k(t)$ is defined as
-	\begin{multline}
-	\mathcal{G}_k(t) = \Big[\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
-	e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-	e^{\frac{t}{n_k} \Liu_\mathrm{middle}^k}
-	 \times \\
-	\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-	\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
-	\Big]^{n_k}.
-	\end{multline}
-	
-	The definition above applies for $k \in [1, M]$.
-	The recursive process comes to an end when we make
-	\begin{equation}
-	\mathcal{G}_0(t) = e^{\frac{t}{2} \Liu_\mathrm{move}}
-	e^{t \Liu_\mathrm{middle}}
-	e^{\frac{t}{2} \Liu_\mathrm{move}}.
-	\end{equation}
-\end{subequations}
 
 \subsection{Force-Dependent Isokinetic Propagator}
 
