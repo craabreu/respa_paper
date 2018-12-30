@@ -25,6 +25,9 @@
 \usepackage[table]{xcolor}
 \definecolor{lightgray}{gray}{0.85}
 %
+\usepackage{tikz}
+\usetikzlibrary{decorations.text}
+%
 \usepackage{array}
 \newcolumntype{L}{>{$}l<{$}}
 \newcolumntype{C}{>{$}c<{$}}
@@ -82,7 +85,7 @@ The SIN(R) method \cite{Leimkuhler_2013}.
 
 Isokinetic distributions coincides with a canonical distribution if we look at the coordinates only.
 
-\section{Multiple Time-Scale Integration}
+\section{Method}
 
 Consider a system of $N$ particles in $d$ dimensions, whose every configurational degree of freedom $\dof$ has coordinate $q_\dof$, momentum $p_\dof$, and associated mass $m_\dof$.
 The system is subject to a potential field $U(q)$ and, therefore, the force acting on $\dof$ is $F_\dof = -\diff{q_\dof}{U}$.
@@ -96,9 +99,225 @@ where $\Liu = \xi(x) \cdot \nabla_x$ is a generalized (i.e. non-Hamiltonian) Lio
 
 The solution of this equation is formally written as $x_t = e^{t\Liu}x_0$.
 However, it is usually necessary to approximate the action of the classical propagator $e^{t\Liu}$ numerically.
-This can be done by sequentially applying a split operator $\prod_j e^{\Delta t\Liu_j} \approx e^{\Delta \Liu}$, where $\Delta t = t/n_M$ and $\sum_j \Liu_j = \Liu$.
-This means that $n_M$ is the number of integration steps and $\Delta t$ is the step size.
-According to the Trotter theorem \cite{Trotter_1959}, equality holds when $\Delta t \to 0$.
+This can be done by sequentially applying a split operator $\prod_j e^{\Delta t\Liu_j} \approx e^{\Delta \Liu}$, where $\Delta t = t/n$ and $\sum_j \Liu_j = \Liu$.
+This means that $n$ is the number of integration steps and $\Delta t$ is the step size.
+According to the Trotter theorem \cite{Trotter_1959}, equality holds when $n \to \infty$ and, therefore, $\Delta t \to 0$.
+
+\subsection{Single Time Scale Integration}
+
+We start partition the extended phase space Liouville operator in Eq.~\eqref{eq:general equation of motion} as
+\begin{equation}
+\label{eq:STS Liouville Partition}
+\Liu = \Liu_\mathrm{move} + \Liu_\mathrm{force} + \Liu_\mathrm{bath},
+\end{equation}
+where $\Liu_\mathrm{move}$ is the only component which entails changes in the particle coordinates.
+Likewise, component $\Liu_\mathrm{force}$ is the only one that depends on the forces.
+Then, operator $\Liu_\mathrm{bath}$ is reserved to transformations in particle momenta that depend exclusively on the state of extended phase space variables.
+Transformations in such variables themselves can occur due to the action of any component in Eq.~\eqref{eq:RESPA Liouville Operator}.
+
+As an example, for a system at constant volume subject to the effect of a thermostat set, we would have
+\begin{equation}
+\Liu_\mathrm{move} = \sum_\dof v_\dof \diff{q_\dof}{},
+\end{equation}
+where $v_\dof = \frac{p_\dof}{m_\dof}$ is the velocity of degree of freedom $\dof$, and
+\begin{equation}
+\Liu_\mathrm{force} = \sum_\dof F_\dof \diff{p_\dof}{},
+\end{equation}
+meaning that the effects of propagators $e^{t \Liu_\mathrm{move}}$ and $e^{t \Liu_\mathrm{force}}$ are simple translations $q_\dof \leftarrow q_\dof + v_\dof t$ and $p_\dof \leftarrow p_\dof + F_\dof t$ for all $\dof$, respectively.
+Then, $\Liu_\mathrm{bath}$ is the Liouville operator regarding the set of thermostats.
+
+The classical propagator which represents the traditional single time step (STS) integration scheme can be written as
+\begin{multline}
+\label{eq:STS side scheme propagator}
+e^{t \Liu_\mathrm{side}} = \Big[e^{\frac{\Delta t}{2} \Liu_\mathrm{bath}}
+e^{\frac{\Delta t}{2} \Liu_\mathrm{force}}
+e^{\Delta t \Liu_\mathrm{move}} \times \\
+\times e^{\frac{\Delta t}{2} \Liu_\mathrm{force}}
+e^{\frac{\Delta t}{2} \Liu_\mathrm{bath}}
+\Big]^{n}.
+\end{multline}
+
+Zhang \textit{et al}. \cite{Zhang_2017} have recently compared the performance of this method, to which they referred as the side scheme, with those of other alternatives.
+One of these, named the middle scheme, can be represented by
+\begin{multline}
+\label{eq:STS middle scheme propagator}
+e^{t \Liu_\mathrm{middle}} = \Big[e^{\frac{\Delta t}{2} \Liu_\mathrm{force}}
+e^{\frac{\Delta t}{2} \Liu_\mathrm{move}}
+e^{\Delta t \Liu_\mathrm{bath}} \times \\
+\times e^{\frac{\Delta t}{2} \Liu_\mathrm{move}}
+e^{\frac{\Delta t}{2} \Liu_\mathrm{force}}
+\Big]^{n}.
+\end{multline}
+
+Note that the thermostat integration is now surrounded by coordinate moves.
+In this way, thermostat-induced changes in the particle momenta acquire a more direct influence on the resulting new coordinates at every step.
+As the authors observed, this tends to produce better coordinate sampling when compared to the more traditional side scheme \cite{Zhang_2017}.
+This means that ensemble averages of coordinate-related properties become less affected by an increase in the time step size.
+Such a tendency had been previously noticed for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, but the new study extended the observation to other stochastic as well as deterministic algorithms.
+
+Zhang \textit{et al}. \cite{Zhang_2017} also noted that the middle scheme degrades the sampling of momenta when it comes to reproducing the specified temperature.
+It is implied here that every sampling action occurs right after the end of a complete time step.
+Therefore, it succeeds a momentum move in both the side and middle schemes, with the difference that such move is thermostat-induced in the former, but force-induced in the latter.
+It is thus not surprising that the momenta sampled with the side scheme reproduce the specified temperature more closely than those sampled with the middle scheme.
+The authors also tested a third approach, called the end scheme, in which the whole thermostat is integrated in the end of each step, as opposed to splitting it in half between the end of a step and the beginning of the following one, as it is done in the side scheme.
+As one can expect, the sampled momenta reproduce the set-point temperature even better in this case, while the sampling of coordinates is unaffected when compared to the side-scheme results.
+
+As a matter of fact, from every splitting integration method, a valid alternative could be devised by shifting the endpoint of every time step to some other switching point along the sequence of propagators.
+In the deterministic case, all these alternatives will produce the same overall trajectory.
+Thus, one could view them as being the same integration method, but with samples taken at different switching points.
+Such type of equivalence occurs for the side and end schemes when propagator $e^{t \Liu_\mathrm{bath}}$ can be solved analytically.
+This can be visualized in Fig.~\ref{fig:STS integration schemes}, in which the task flows of different splitting schemes are depicted.
+Empty circles represent internal switching points, while full circles represent the endpoints of complete integration steps.
+The side scheme is presented in Fig.~\ref{fig:STS integration schemes} as side-vv because it entails a Velocity-Verlet core.
+By directly contrasting the side and end scheme representations, one can easily grasp their mentioned equivalence.
+It is important to mention that, despite such correspondence, the side scheme is considered to obey time-reversal symmetry, while the end scheme is not.
+Again, it is implied here that a momentum flip aiming at reversing a trajectory would necessarily occur at the endpoint of a step.
+
+\begin{figure*}
+	\begin{tikzpicture}
+	% SIDE:
+	\draw[<-, thick] (0,5) -- (13,5);
+%	\node() at (0,5)[left]{t};
+	\node() at ( 0.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.0,5)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (11.0,5)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 1.25,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 2.75,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 4.25,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 6.50,5)[above] {$e^{t \Liu_\mathrm{move}}$};
+	\node() at ( 8.75,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (10.25,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (11.75,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (14,5)[] {side-vv};
+
+	% END
+	\draw[<-, thick] (0,4) -- (13,4);
+%	\node() at (0,4)[left]{t};
+	\node() at ( 0.5,4)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,4)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.00,4)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at ( 4.25,4)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 6.50,4)[above] {$e^{t \Liu_\mathrm{move}}$};
+	\node() at ( 8.75,4)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (11.00,4)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at (14,4)[] {end};
+
+	% MIDLLE
+	\draw[<-, thick] (0,3) -- (13,3);
+%	\node() at (0,3)[left]{t};
+	\node() at ( 0.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.0,3)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (11.0,3)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 1.25,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 2.75,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 4.25,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 6.50,3)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at ( 8.75,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (10.25,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (11.75,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (14,3)[] {middle};
+
+	% NEW 1
+	\draw[<-, thick] (0,2) -- (13,2);
+%	\node() at (0,2)[left]{t};
+	\node() at ( 0.5,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,2)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,2)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.00,2)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at ( 4.25,2)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 6.50,2)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at ( 8.75,2)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (11.00,2)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at (14,2)[] {????};
+
+	% NEW 2
+	\draw[<-, thick] (0,1) -- (13,1);
+%	\node() at (0,1)[left]{t};
+	\node() at ( 0.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 6.5,1)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.00,1)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at ( 4.25,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 5.75,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 7.25,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 8.75,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (11.00,1)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at (14,1)[] {side-pv};
+
+	% NEW 2
+	\draw[<-, thick] (0,0) -- (13,0);
+%	\node() at (0,0)[left]{t};
+	\node() at ( 0.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.0,0)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (11.0,0)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 1.25,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 2.75,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 4.25,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 6.50,0)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at ( 8.75,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (10.25,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (11.75,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (14,0)[] {side-pv};
+	\end{tikzpicture}
+	\caption{Integration schemes.
+	In all schemes, force computation is required once per time step.}
+	\label{fig:STS integration schemes}
+\end{figure*}
+
+Fig.~\ref{fig:STS integration schemes} also shows that the time-reversible middle scheme is truly distinct from the previous ones.
+If its difficulty to keep the canonical distribution of momenta is really due to the sampling's precedence by a force-induced transformation, then a simple shift of endpoints can possibly solve the problem.
+Such shift is the one that results in
+\begin{multline}
+\label{eq:STS ???? scheme propagator}
+e^{t \Liu_\mathrm{????}} = \Big[
+e^{\frac{\Delta t}{2} \Liu_\mathrm{move}}
+e^{\Delta t \Liu_\mathrm{bath}}
+e^{\frac{\Delta t}{2} \Liu_\mathrm{move}}
+e^{\Delta t \Liu_\mathrm{force}}
+\Big]^{n},
+\end{multline}
+which is also represented in Fig.~\ref{fig:STS integration schemes}.
+The name ???? is to remind that the forces are fully exhausted at the onset of every step.
+As one can observe, this method can produce the same overall trajectory and the same coordinate samples as the middle scheme.
+However, the momentum values resulting from the action of the thermostat will remain untouched until sampling.
+Like the end scheme, the new method is not time-reversible, but the importance of such feature depends on the desired application.
+For instance, it is very important for the design of a Hybrid Monte Carlo method, but it might be unnecessary for simple Molecular Dynamics sampling.
+
+Finally, it is possible to devise another method with both time-reversal symmetry and overall-trajectory correspondence to the middle scheme.
+This is done by moving the step endpoint to halfway into the thermostat integration.
+In Fig.~\ref{fig:STS integration schemes}, this scheme is referred to as side-pv.
+To explain why, we show a second representation of the same method, so as to facilitate a direct comparison with the side-vv scheme.
+Note that side-pv could have derived from side-vv by replacing its Velocity-Verlet core by a Position-Verlet integrator \cite{Tuckerman_1992}.
+Despite the overall-trajectory correspondence, the middle and side-pv schemes produce distinct samples in terms of both coordinates and momenta.
+By applying the reasoning employed thus far to compare the three time-reversible schemes, side-pv is expected to yield better coordinates but worse momenta than side-vv, as well as better momenta but worse coordinates than the middle scheme.
+
+\subsection{Multiple Time Scale Integration}
 
 In order to devise a multiple time-scale (MTS) integration scheme using the reversible reference system propagator algorithm (RESPA) \cite{Tuckerman_1992}, we split the force on each degree of freedom $\dof$ into a sum of $M$ terms, i.e. $F_\dof = \sum_{k=1}^M F_\dof^k$.
 Here, the characteristic time scale of each force component increases with index $k$, meaning that $F_\dof^1$ is the fastest component while $F_\dof^M$ is the slowest one.
@@ -106,41 +325,17 @@ In the basic RESPA recipe, integration at the largest time scale ($k=M$) is done
 Internally, every step of size $\delta t_k$, taken at a time scale $k$, involves $n_{k-1}$ substeps of size $\delta t_k/n_{k-1}$ each.
 Therefore, the step sizes at all time scales are determined by defining the total integration time $t$ and a set of integer numbers $\{n_k\}_{k=1}^M$.
 
-Here, we propose partitioning the extended-system Liouville operator in Eq.~\eqref{eq:general equation of motion} as
+Here, we partition the extended phase space Liouville operator in Eq.~\eqref{eq:general equation of motion} as
 \begin{equation}
 \label{eq:RESPA Liouville Operator}
-\Liu = \Liu_\mathrm{move} + \sum_{k=1}^M \Liu_\mathrm{force}^k + \sum_{k=0}^M \Liu_\mathrm{ext}^k,
+\Liu = \Liu_\mathrm{move} + \sum_{k=1}^M \Liu_\mathrm{force}^k + \sum_{k=1}^M \Liu_\mathrm{bath}^k,
 \end{equation}
 where $\Liu_\mathrm{move}$ is the only component which entails changes in the particle coordinates.
 Likewise, each component $\Liu_\mathrm{force}^k$ is the only one that depends on the forces labeled with superscript $k$.
-Then, operators $\{\Liu_\mathrm{ext}^k\}_{k=0}^M$ are reserved to transformations in particle momenta that depend exclusively on the state of extended-space variables.
-Finally, we note that transformations in these variables can occur due to the action of any component in Eq.~\eqref{eq:RESPA Liouville Operator}.
+Then, operators $\{\Liu_\mathrm{bath}^k\}_{k=1}^M$ are reserved to transformations in particle momenta that depend exclusively on the state of extended phase space variables.
+Finally, transformations in these extended variables can occur due to any one of the components in Eq.~\eqref{eq:RESPA Liouville Operator}.
 
-The classical propagator representing a possible RESPA scheme can be written in a recursive manner as
-\begin{equation}
-\label{eq:RESPA outermost propagator}
-e^{t \Liu} = \mathcal{G}_M(t),
-\end{equation}
-where $\mathcal{G}_M(t)$ belongs to a family of operators whose each member $\mathcal{G}_k(t)$ is defined as
-\begin{multline}
-\label{eq:RESPA scheme 1}
-\mathcal{G}_k(t) = \Big[e^{\frac{t}{2 n_k} \Liu_\mathrm{ext}^k}
-e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-\mathcal{G}_{k-1}\left(\tfrac{t}{n_k}\right) \times \\
-\times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-e^{\frac{t}{2 n_k} \Liu_\mathrm{ext}^k}
-\Big]^{n_k}.
-\end{multline}
-
-This definition applies for $k \in [1, M]$, and the recursive process comes to an end when we make
-\begin{equation}
-\label{eq:RESPA innermost propagator}
-\mathcal{G}_0(t) = e^{\frac{t}{2} \Liu_\mathrm{move}}
-e^{t \Liu_\mathrm{ext}^0}
-e^{\frac{t}{2} \Liu_\mathrm{move}}.
-\end{equation}
-
-As an example, for a system at constant volume subject to the action of a set of thermostats, we would have
+As an example, for a system at constant volume subject to the action of a thermostat set, we would have
 \begin{equation}
 \Liu_\mathrm{move} = \sum_\dof v_\dof \diff{q_\dof}{},
 \end{equation}
@@ -149,27 +344,64 @@ where $v_\dof = \frac{p_\dof}{m_\dof}$ is the velocity of degree of freedom $\do
 \Liu_\mathrm{force}^k = \sum_\dof F_\dof^k \diff{p_\dof}{},
 \end{equation}
 meaning that the effects of propagators $e^{t \Liu_\mathrm{move}}$ and $e^{t \Liu_\mathrm{force}^k}$ are simple translations $q_\dof \leftarrow q_\dof + v_\dof t$ and $p_\dof \leftarrow p_\dof + F_\dof^k t$ for all $\dof$, respectively.
-Then, if the Liouville operator regarding the thermostat set is $\Liu_\mathrm{T}$, we have freedom to allocate its components throughout the several time scales, with the requirement that $\sum_{k=0}^M \Liu_\mathrm{ext}^k = \Liu_\mathrm{T}$.
+Then, if the Liouville operator regarding the thermostat set is $\Liu_\mathrm{T}$, there is freedom to allocate its components throughout the several time scales, provided that $\sum_{k=1}^M \Liu_\mathrm{bath}^k = \Liu_\mathrm{T}$.
 
-The described MTS scheme becomes closely related to the extended system RESPA algorithms introduced in Ref.~\citenum{Martyna_1996} if one makes $\Liu_\mathrm{ext}^k = 0$ for all but a selected index $k^\ast \geq 1$.
-This implies that the whole thermostat is integrated at a unique time scale.
+The classical propagator representing a possible RESPA scheme can be written in a recursive manner as
+\begin{equation}
+\label{eq:RESPA outermost propagator}
+e^{t \Liu} = \mathcal{G}_M(t,n_M),
+\end{equation}
+where $\mathcal{G}_M(t,n)$ belongs to a family of operators whose each member $\mathcal{G}_k(t,n)$ for $k \in [1, M]$ is
+\begin{multline}
+\label{eq:RESPA scheme 1}
+\mathcal{G}_k(t,n) = \Big[e^{\frac{t}{2 n} \Liu_\mathrm{bath}^k}
+e^{\frac{t}{2 n} \Liu_\mathrm{force}^k}
+\mathcal{G}_{k-1}\left(\tfrac{t}{n}, n_{k-1}\right) \times \\
+\times e^{\frac{t}{2 n} \Liu_\mathrm{force}^k}
+e^{\frac{t}{2 n} \Liu_\mathrm{bath}^k}
+\Big]^{n}.
+\end{multline}
+Finally, the recursive process comes to an end once we make
+\begin{equation}
+\label{eq:RESPA innermost propagator}
+\mathcal{G}_0(t,n) = e^{t \Liu_\mathrm{move}}.
+\end{equation}
+
+The scheme above will be closely related to the extended system RESPA algorithms introduced in Ref.~\citenum{Martyna_1996} if we concentrate the whole thermostat integration in a single time scale with index $k^\ast$, thus making $\Liu_\mathrm{bath}^k = 0$ for all $k \neq k^\ast$.
 For instance, the XO-RESPA scheme \cite{Martyna_1996, Leimkuhler_2013} is reproduced by making $k^\ast = M$.
 Even though the XI-RESPA scheme \cite{Martyna_1996, Leimkuhler_2013} does not fit exactly into the proposed notation, a close variant XI\textsuperscript{*}-RESPA emerges by making $k^\ast = 1$.
 
-Due to the presence of $e^{t \Liu_\mathrm{ext}^0}$ in Eq.~\eqref{eq:RESPA innermost propagator}, the described scheme can also be regarded as a MTS generalization of the approach which Zhang and co-workers presented recently as a unified thermostat approach \cite{Zhang_2017}.
-By making $\Liu_\mathrm{ext}^0 = \Liu_\mathrm{T}$ and $\Liu_\mathrm{ext}^k = 0$ for all $k > 0$, one reproduces the so-called \textit{middle} scheme \cite{Zhang_2017}, in which the thermostat integration occurs in-between coordinate moves.
-In this way, thermostat-induced changes in particle momenta acquire a more direct influence on the resulting new coordinates.
-As  Zhang \textit{et al}. \cite{Zhang_2017} observed, this tends to produce better coordinate sampling when compared to the more traditional \textit{side} schemes \cite{Zhang_2017}.
-Such a tendency had been noted already for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, but the new study extended the observation for other stochastic as well as deterministic thermostats.
+Due to the presence of $e^{t \Liu_\mathrm{bath}^0}$ in Eq.~\eqref{eq:RESPA innermost propagator}, the described scheme can also be regarded as a MTS generalization of what Zhang \textit{et al}. \cite{Zhang_2017} presented as a unified thermostat approach.
+By making $\Liu_\mathrm{bath}^0 = \Liu_\mathrm{T}$ and $\Liu_\mathrm{bath}^k = 0$ for all $k > 0$, one reproduces their so-called middle scheme, in which the thermostat integration is surrounded by coordinate moves.
+In this way, thermostat-induced changes in the particle momenta acquire a more direct influence on the resulting new coordinates at every step.
+As the authors observed, this tends to produce better coordinate sampling when compared to the more traditional side scheme \cite{Zhang_2017}.
+Such a tendency had been previously noted for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, but the new study extended the observation to other stochastic as well as deterministic algorithms.
 
-Zhang \textit{et al}. \cite{Zhang_2017} also noted that the middle-scheme improvement in coordinate sampling is achieved at the cost of a degraded sampling of momenta and related properties.
-It is implied here that configurational sampling occurs right after the end of a complete time step.
-Hence, it is performed after a momentum move in both the middle and side schemes, with the difference that such move is force-induced in the former but thermostat-induced in the latter.
-It is thus not surprising that the momenta sampled with the side scheme comply more closely with a canonical distribution than those sampled with the middle scheme.
+Zhang \textit{et al}. \cite{Zhang_2017} also noted that the middle scheme degrades the sampling of momenta when it comes to reproducing the specified temperature.
+It is implied here that every sampling action occurs right after the end of a complete time step.
+Therefore, it succeeds a momentum move in both the side and middle schemes, with the difference that such move is thermostat-induced in the former, but force-induced in the latter.
+It is thus not surprising that the momenta sampled with the side scheme reproduce the specified temperature more closely than those sampled with the middle scheme.
+The authors also tested a third approach, called the end scheme, in which the whole thermostat is integrated in the end of each step, as opposed to splitting it in half between the end of a step and the beginning of the next one, as it is done in the side scheme.
+As one can expect, the sampled momenta reproduce the set-point temperature even better in this case, while the sampling of coordinates is unaffected when compared to the side-scheme results. 
 
-TODO: prepare a figure comparing the different schemes. 
+In fact, for every splitting integration method, an equally valid method could be devised by shifting the endpoint of each time step to some other switching point along the sequence of propagators.
+Alternatively, one can view them as being the same integration method, but with sampling taking place at different switching points.
+This is exactly what happens to the side and end schemes of Ref.~\citenum{Zhang_2017}.
 
-The authors also tested a third approach whose operator splitting is identical to the side scheme, thus producing exactly the same dynamics, 
+It turns out, however, that doing configurational sampling at the end of each step is just a convention.
+
+
+
+the side and end schemes of Ref.~\citenum{Zhang_2017} are in fact the same integrator
+
+
+
+
+ whose operator splitting is identical to the side scheme, thus producing exactly the same dynamics, 
+
+
+
+
 
 
 
@@ -188,11 +420,22 @@ In this new scheme, $\mathcal{G}_k(t)$ becomes
 \label{eq:RESPA scheme 2}
 \mathcal{G}_k(t) = \Big[\mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
 e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
-e^{\frac{t}{n_k} \Liu_\mathrm{ext}^k}
+e^{\frac{t}{n_k} \Liu_\mathrm{bath}^k}
 \times \\
 \times e^{\frac{t}{2 n_k} \Liu_\mathrm{force}^k}
 \mathcal{G}_{k-1}\left(\tfrac{t}{2n_k}\right)
 \Big]^{n_k}.
+\end{multline}
+
+We propose a different scheme by altering the order of the operators in Eq.~\eqref{eq:RESPA scheme 2}.
+In this new scheme, $\mathcal{G}_k(t)$ becomes
+\begin{multline}
+\label{eq:RESPA new scheme}
+\mathcal{G}_k(t) = 
+\left[\mathcal{G}_{k-1}\left(\tfrac{t}{n_{k-1}}\right)\right]^\frac{n_{k-1}}{2}
+e^{\frac{t}{2} \Liu_\mathrm{bath}^k} \times \\
+\left[\mathcal{G}_{k-1}\left(\tfrac{t}{n_{k-1}}\right)\right]^\frac{n_{k-1}}{2}
+e^{t \Liu_\mathrm{force}^k}.
 \end{multline}
 
 In this way, sampling is performed after an update in the smallest time scale.

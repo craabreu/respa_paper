@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import figstyle
 
 fig = plt.figure('axes', figsize=(3.37,2))
-ax = fig.add_subplot(111)
+ax = fig.add_subplot(131)
 ax.set_xlabel('$r$ (\AA)')
 ax.set_ylabel('$E$ (kcal/mol)')
 
