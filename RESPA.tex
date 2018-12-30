@@ -105,7 +105,7 @@ According to the Trotter theorem \cite{Trotter_1959}, equality holds when $n \to
 
 \subsection{Single Time Scale Integration}
 
-We start partition the extended phase space Liouville operator in Eq.~\eqref{eq:general equation of motion} as
+We start by partitioning the extended phase-space Liouville operator in Eq.~\eqref{eq:general equation of motion} as
 \begin{equation}
 \label{eq:STS Liouville Partition}
 \Liu = \Liu_\mathrm{move} + \Liu_\mathrm{force} + \Liu_\mathrm{bath},
@@ -323,96 +323,46 @@ In order to devise a multiple time-scale (MTS) integration scheme using the reve
 Here, the characteristic time scale of each force component increases with index $k$, meaning that $F_\dof^1$ is the fastest component while $F_\dof^M$ is the slowest one.
 In the basic RESPA recipe, integration at the largest time scale ($k=M$) is done by executing $n_M$ steps of size $\delta t_M = \Delta t$.
 Internally, every step of size $\delta t_k$, taken at a time scale $k$, involves $n_{k-1}$ substeps of size $\delta t_k/n_{k-1}$ each.
-Therefore, the step sizes at all time scales are determined by defining the total integration time $t$ and a set of integer numbers $\{n_k\}_{k=1}^M$.
+In general, coordinate moves are performed at the time scale of the fastest forces.
+Nevertheless, it is possible to split them even further, especially if they are interwoven with the handling of thermostat variables, such as in the middle scheme described in the previous section.
+Hence, we can define an extra number $n_0$ of inner steps particularly related to these moves.
+After all, the step sizes at all time scales are determined once we define the total integration time $t$ and the set of integer numbers $\{n_k\}_{k=0}^M$.
 
-Here, we partition the extended phase space Liouville operator in Eq.~\eqref{eq:general equation of motion} as
+With the previous definitions, we partition the extended phase-space Liouville operator in Eq.~\eqref{eq:general equation of motion} as
 \begin{equation}
-\label{eq:RESPA Liouville Operator}
-\Liu = \Liu_\mathrm{move} + \sum_{k=1}^M \Liu_\mathrm{force}^k + \sum_{k=1}^M \Liu_\mathrm{bath}^k,
+\label{eq:RESPA Liouville Partition}
+\Liu = \Liu_\mathrm{move} + \sum_{k=1}^M \Liu_\mathrm{force}^k + \sum_{k=0}^M \Liu_\mathrm{bath}^k,
 \end{equation}
-where $\Liu_\mathrm{move}$ is the only component which entails changes in the particle coordinates.
-Likewise, each component $\Liu_\mathrm{force}^k$ is the only one that depends on the forces labeled with superscript $k$.
-Then, operators $\{\Liu_\mathrm{bath}^k\}_{k=1}^M$ are reserved to transformations in particle momenta that depend exclusively on the state of extended phase space variables.
-Finally, transformations in these extended variables can occur due to any one of the components in Eq.~\eqref{eq:RESPA Liouville Operator}.
-
-As an example, for a system at constant volume subject to the action of a thermostat set, we would have
-\begin{equation}
-\Liu_\mathrm{move} = \sum_\dof v_\dof \diff{q_\dof}{},
-\end{equation}
-where $v_\dof = \frac{p_\dof}{m_\dof}$ is the velocity of degree of freedom $\dof$, and
-\begin{equation}
-\Liu_\mathrm{force}^k = \sum_\dof F_\dof^k \diff{p_\dof}{},
-\end{equation}
-meaning that the effects of propagators $e^{t \Liu_\mathrm{move}}$ and $e^{t \Liu_\mathrm{force}^k}$ are simple translations $q_\dof \leftarrow q_\dof + v_\dof t$ and $p_\dof \leftarrow p_\dof + F_\dof^k t$ for all $\dof$, respectively.
-Then, if the Liouville operator regarding the thermostat set is $\Liu_\mathrm{T}$, there is freedom to allocate its components throughout the several time scales, provided that $\sum_{k=1}^M \Liu_\mathrm{bath}^k = \Liu_\mathrm{T}$.
+where, as in Eq.~\eqref{eq:STS Liouville Partition}, each component $\Liu_\mathrm{force}^k$ is the only one that depends on the forces labeled with superscript $k$, while operators $\{\Liu_\mathrm{bath}^k\}_{k=0}^M$ are reserved to transformations in particle momenta affected by extended phase-space variables exclusively.
+Also, transformations in these extended variables can stem from the action of any operator in Eq.~\eqref{eq:RESPA Liouville Partition}.
+In the case of a constant NVT dynamics, if the Liouville operator regarding the thermostat set is $\Liu_\mathrm{T}$, there is freedom to allocate its components throughout the several time scales, provided that $\sum_{k=0}^M \Liu_\mathrm{bath}^k = \Liu_\mathrm{T}$.
 
 The classical propagator representing a possible RESPA scheme can be written in a recursive manner as
 \begin{equation}
 \label{eq:RESPA outermost propagator}
-e^{t \Liu} = \mathcal{G}_M(t,n_M),
+e^{t \Liu} = [\mathcal{G}_M(\Delta t)]^{n_M},
 \end{equation}
-where $\mathcal{G}_M(t,n)$ belongs to a family of operators whose each member $\mathcal{G}_k(t,n)$ for $k \in [1, M]$ is
+where $\mathcal{G}_M$ belongs to a family of operators whose each member $\mathcal{G}_k(\delta t)$ for $k \in [1, M]$ is
 \begin{multline}
 \label{eq:RESPA scheme 1}
-\mathcal{G}_k(t,n) = \Big[e^{\frac{t}{2 n} \Liu_\mathrm{bath}^k}
-e^{\frac{t}{2 n} \Liu_\mathrm{force}^k}
-\mathcal{G}_{k-1}\left(\tfrac{t}{n}, n_{k-1}\right) \times \\
-\times e^{\frac{t}{2 n} \Liu_\mathrm{force}^k}
-e^{\frac{t}{2 n} \Liu_\mathrm{bath}^k}
-\Big]^{n}.
+\mathcal{G}_k(\delta t) = e^{\frac{\delta t}{2} \Liu_\mathrm{bath}^k}
+e^{\frac{\delta t}{2} \Liu_\mathrm{force}^k}
+\left[ \mathcal{G}_{k-1}\left(\tfrac{\delta t}{n_{k-1}}\right) \right]^{n_{k-1}} \times \\
+\times e^{\frac{\delta t}{2} \Liu_\mathrm{force}^k}
+e^{\frac{\delta t}{2} \Liu_\mathrm{bath}^k}.
 \end{multline}
+
 Finally, the recursive process comes to an end once we make
 \begin{equation}
 \label{eq:RESPA innermost propagator}
-\mathcal{G}_0(t,n) = e^{t \Liu_\mathrm{move}}.
+\mathcal{G}_0(\delta t) = e^{\frac{\delta t}{2} \Liu_\mathrm{move}}
+e^{\delta t \Liu_\mathrm{bath}^0}
+e^{\frac{\delta t}{2} \Liu_\mathrm{move}}.
 \end{equation}
 
-The scheme above will be closely related to the extended system RESPA algorithms introduced in Ref.~\citenum{Martyna_1996} if we concentrate the whole thermostat integration in a single time scale with index $k^\ast$, thus making $\Liu_\mathrm{bath}^k = 0$ for all $k \neq k^\ast$.
-For instance, the XO-RESPA scheme \cite{Martyna_1996, Leimkuhler_2013} is reproduced by making $k^\ast = M$.
-Even though the XI-RESPA scheme \cite{Martyna_1996, Leimkuhler_2013} does not fit exactly into the proposed notation, a close variant XI\textsuperscript{*}-RESPA emerges by making $k^\ast = 1$.
-
-Due to the presence of $e^{t \Liu_\mathrm{bath}^0}$ in Eq.~\eqref{eq:RESPA innermost propagator}, the described scheme can also be regarded as a MTS generalization of what Zhang \textit{et al}. \cite{Zhang_2017} presented as a unified thermostat approach.
-By making $\Liu_\mathrm{bath}^0 = \Liu_\mathrm{T}$ and $\Liu_\mathrm{bath}^k = 0$ for all $k > 0$, one reproduces their so-called middle scheme, in which the thermostat integration is surrounded by coordinate moves.
-In this way, thermostat-induced changes in the particle momenta acquire a more direct influence on the resulting new coordinates at every step.
-As the authors observed, this tends to produce better coordinate sampling when compared to the more traditional side scheme \cite{Zhang_2017}.
-Such a tendency had been previously noted for Langevin thermostats \cite{Leimkuhler_2012, Leimkuhler_2013_2}, but the new study extended the observation to other stochastic as well as deterministic algorithms.
-
-Zhang \textit{et al}. \cite{Zhang_2017} also noted that the middle scheme degrades the sampling of momenta when it comes to reproducing the specified temperature.
-It is implied here that every sampling action occurs right after the end of a complete time step.
-Therefore, it succeeds a momentum move in both the side and middle schemes, with the difference that such move is thermostat-induced in the former, but force-induced in the latter.
-It is thus not surprising that the momenta sampled with the side scheme reproduce the specified temperature more closely than those sampled with the middle scheme.
-The authors also tested a third approach, called the end scheme, in which the whole thermostat is integrated in the end of each step, as opposed to splitting it in half between the end of a step and the beginning of the next one, as it is done in the side scheme.
-As one can expect, the sampled momenta reproduce the set-point temperature even better in this case, while the sampling of coordinates is unaffected when compared to the side-scheme results. 
-
-In fact, for every splitting integration method, an equally valid method could be devised by shifting the endpoint of each time step to some other switching point along the sequence of propagators.
-Alternatively, one can view them as being the same integration method, but with sampling taking place at different switching points.
-This is exactly what happens to the side and end schemes of Ref.~\citenum{Zhang_2017}.
-
-It turns out, however, that doing configurational sampling at the end of each step is just a convention.
-
-
-
-the side and end schemes of Ref.~\citenum{Zhang_2017} are in fact the same integrator
-
-
-
-
- whose operator splitting is identical to the side scheme, thus producing exactly the same dynamics, 
-
-
-
-
-
-
-
-
-momentum move in the middle scheme and after a thermostat-induced momentum move in the side scheme.
-
-
-s, but with an important difference.
-in the former such a momentum move comprises 
-
-We argue, however, that this is a mere convention, since an equally valid integration method could be devised by shifting the endpoint of each step to some other place in the sequence of propagators.
+If we concentrate the whole thermostat integration in a single time scale with index $k^\ast \ge 1$, thus making $\Liu_\mathrm{bath}^k = 0$ for all $k \neq k^\ast$, the scheme becomes closely related to the extended system RESPA algorithms introduced in Ref.~\citenum{Martyna_1996}.
+For instance, the XO-RESPA scheme \cite{Martyna_1996} is reproduced by making $k^\ast = M$.
+Although the XI-RESPA scheme \cite{Martyna_1996} does not fit exactly into the proposed notation, a close variant XI\textsuperscript{*}-RESPA emerges by making $k^\ast = 1$.
 
 We propose a different scheme by altering the order of the operators in Eq.~\eqref{eq:RESPA scheme 2}.
 In this new scheme, $\mathcal{G}_k(t)$ becomes
