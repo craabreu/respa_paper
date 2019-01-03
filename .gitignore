@@ -7,5 +7,5 @@ acs-*.bib
 *.pdf
 *.synctex.gz
 
-Figures/*.eps
+Figures/*.png
 Figures/__pycache__

@@ -1,0 +1,111 @@
+\begin{tikzpicture}
+	% SIDE-VV:
+	\draw[<-, thick] (0,5) -- (13,5);
+%	\node() at (0,5)[left]{t};
+	\node() at ( 0.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.0,5)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (11.0,5)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,5)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 1.25,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 2.75,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 4.25,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 6.50,5)[above] {$e^{t \Liu_\mathrm{move}}$};
+	\node() at ( 8.75,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (10.25,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (11.75,5)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (14,5)[] {side-vv};
+
+	% END
+	\draw[<-, thick] (0,4) -- (13,4);
+%	\node() at (0,4)[left]{t};
+	\node() at ( 0.5,4)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,4)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,4)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.00,4)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at ( 4.25,4)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 6.50,4)[above] {$e^{t \Liu_\mathrm{move}}$};
+	\node() at ( 8.75,4)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (11.00,4)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at (14,4)[] {end};
+
+	% MIDLLE
+	\draw[<-, thick] (0,3) -- (13,3);
+%	\node() at (0,3)[left]{t};
+	\node() at ( 0.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.0,3)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (11.0,3)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,3)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 1.25,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 2.75,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at ( 4.25,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 6.50,3)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at ( 8.75,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (10.25,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (11.75,3)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{force}}$};
+	\node() at (14,3)[] {middle};
+
+	% BLITZ
+	\draw[<-, thick] (0,2) -- (13,2);
+%	\node() at (0,2)[left]{t};
+	\node() at ( 0.5,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,2)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,2)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,2)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.00,2)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at ( 4.25,2)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 6.50,2)[above] {$e^{t \Liu_\mathrm{bath}}$};
+	\node() at ( 8.75,2)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (11.00,2)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at (14,2)[] {blitz};
+
+	% SIDE-PV 1
+	\draw[<-, thick] (0,1) -- (13,1);
+%	\node() at (0,1)[left]{t};
+	\node() at ( 0.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 6.5,1)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,1)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.00,1)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at ( 4.25,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 5.75,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 7.25,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 8.75,1)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (11.00,1)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at (14,1)[] {side-pv};
+
+	% SIDE-PV 2
+	\draw[<-, thick] (0,0) -- (13,0);
+%	\node() at (0,0)[left]{t};
+	\node() at ( 0.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 2.0,0)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at ( 3.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 5.0,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 8.0,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 9.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at (11.0,0)[fill=black,shape=circle,draw,scale=0.5]{};
+	\node() at (12.5,0)[fill=white,shape=circle,draw,scale=0.5]{};
+	\node() at ( 1.25,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 2.75,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at ( 4.25,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at ( 6.50,0)[above] {$e^{t \Liu_\mathrm{force}}$};
+	\node() at ( 8.75,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{move}}$};
+	\node() at (10.25,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (11.75,0)[above] {$e^{\frac{\delta t}{2} \Liu_\mathrm{bath}}$};
+	\node() at (14,0)[] {side-pv};
+\end{tikzpicture}
